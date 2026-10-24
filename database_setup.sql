@@ -1,0 +1,580 @@
+/* ============================================================================
+   DATABASE SETUP SCRIPT
+   Creates the 10 tables used by practice_queries.sql and loads the sample data.
+
+   HOW TO USE
+   1. In SQL Server Management Studio (SSMS), create an empty database:
+         CREATE DATABASE SalesAnalysis;
+   2. Select that database in the toolbar (or run: USE SalesAnalysis;).
+   3. Run this whole script (F5). It can be run again at any time: it drops
+      the tables first and rebuilds them.
+
+   Requires SQL Server 2016 or later (DROP TABLE IF EXISTS).
+   The data is sample data: every customer email uses the example.com domain.
+   ============================================================================ */
+
+-- Remove existing tables (children first, so foreign keys do not block the drops)
+
+DROP TABLE IF EXISTS CampaignResponses;
+DROP TABLE IF EXISTS SupportTickets;
+DROP TABLE IF EXISTS Payments;
+DROP TABLE IF EXISTS OrderItems;
+DROP TABLE IF EXISTS Orders;
+DROP TABLE IF EXISTS MarketingCampaigns;
+DROP TABLE IF EXISTS Products;
+DROP TABLE IF EXISTS Customers;
+DROP TABLE IF EXISTS Employees;
+DROP TABLE IF EXISTS Departments;
+
+-- ============================================================================
+-- TABLES
+-- ============================================================================
+
+CREATE TABLE Departments (
+    DepartmentID INT NOT NULL,
+    DepartmentName NVARCHAR(100) NOT NULL,
+    Location NVARCHAR(100) NULL,
+    CONSTRAINT PK_Departments PRIMARY KEY (DepartmentID)
+);
+
+CREATE TABLE Employees (
+    EmployeeID INT NOT NULL,
+    FirstName NVARCHAR(50) NOT NULL,
+    LastName NVARCHAR(50) NOT NULL,
+    DepartmentID INT NOT NULL,
+    JobTitle NVARCHAR(100) NULL,
+    HireDate DATE NULL,
+    MonthlySalary DECIMAL(18,2) NULL,
+    ManagerID INT NULL,
+    CONSTRAINT PK_Employees PRIMARY KEY (EmployeeID),
+    CONSTRAINT FK_Employees_DepartmentID FOREIGN KEY (DepartmentID) REFERENCES Departments(DepartmentID),
+    CONSTRAINT FK_Employees_ManagerID FOREIGN KEY (ManagerID) REFERENCES Employees(EmployeeID)
+);
+
+CREATE TABLE Customers (
+    CustomerID INT NOT NULL,
+    FirstName NVARCHAR(50) NOT NULL,
+    LastName NVARCHAR(50) NOT NULL,
+    Email NVARCHAR(150) NULL,
+    City NVARCHAR(100) NULL,
+    State NVARCHAR(100) NULL,
+    Segment NVARCHAR(50) NULL,
+    SignupDate DATE NULL,
+    CONSTRAINT PK_Customers PRIMARY KEY (CustomerID)
+);
+
+CREATE TABLE Products (
+    ProductID INT NOT NULL,
+    ProductName NVARCHAR(150) NOT NULL,
+    Category NVARCHAR(100) NULL,
+    UnitPrice DECIMAL(18,2) NOT NULL,
+    SupplierName NVARCHAR(150) NULL,
+    ReorderLevel INT NULL,
+    CONSTRAINT PK_Products PRIMARY KEY (ProductID)
+);
+
+CREATE TABLE MarketingCampaigns (
+    CampaignID INT NOT NULL,
+    CampaignName NVARCHAR(150) NOT NULL,
+    Channel NVARCHAR(100) NULL,
+    StartDate DATE NULL,
+    EndDate DATE NULL,
+    Budget DECIMAL(18,2) NULL,
+    TargetSegment NVARCHAR(50) NULL,
+    CONSTRAINT PK_MarketingCampaigns PRIMARY KEY (CampaignID)
+);
+
+CREATE TABLE Orders (
+    OrderID INT NOT NULL,
+    CustomerID INT NOT NULL,
+    EmployeeID INT NULL,
+    OrderDate DATE NOT NULL,
+    OrderStatus NVARCHAR(50) NULL,
+    SalesChannel NVARCHAR(50) NULL,
+    ShippingCity NVARCHAR(100) NULL,
+    CONSTRAINT PK_Orders PRIMARY KEY (OrderID),
+    CONSTRAINT FK_Orders_CustomerID FOREIGN KEY (CustomerID) REFERENCES Customers(CustomerID),
+    CONSTRAINT FK_Orders_EmployeeID FOREIGN KEY (EmployeeID) REFERENCES Employees(EmployeeID)
+);
+
+CREATE TABLE OrderItems (
+    OrderItemID INT NOT NULL,
+    OrderID INT NOT NULL,
+    ProductID INT NOT NULL,
+    Quantity INT NOT NULL,
+    UnitPrice DECIMAL(18,2) NOT NULL,
+    DiscountPercent DECIMAL(5,2) NOT NULL,
+    CONSTRAINT PK_OrderItems PRIMARY KEY (OrderItemID),
+    CONSTRAINT FK_OrderItems_OrderID FOREIGN KEY (OrderID) REFERENCES Orders(OrderID),
+    CONSTRAINT FK_OrderItems_ProductID FOREIGN KEY (ProductID) REFERENCES Products(ProductID)
+);
+
+CREATE TABLE Payments (
+    PaymentID INT NOT NULL,
+    OrderID INT NOT NULL,
+    PaymentDate DATE NULL,
+    PaymentMethod NVARCHAR(50) NULL,
+    Amount DECIMAL(18,2) NOT NULL,
+    PaymentStatus NVARCHAR(50) NULL,
+    CONSTRAINT PK_Payments PRIMARY KEY (PaymentID),
+    CONSTRAINT FK_Payments_OrderID FOREIGN KEY (OrderID) REFERENCES Orders(OrderID)
+);
+
+CREATE TABLE SupportTickets (
+    TicketID INT NOT NULL,
+    CustomerID INT NOT NULL,
+    EmployeeID INT NOT NULL,
+    OrderID INT NULL,
+    OpenedDate DATE NULL,
+    ClosedDate DATE NULL,
+    Priority NVARCHAR(50) NULL,
+    TicketStatus NVARCHAR(50) NULL,
+    IssueType NVARCHAR(100) NULL,
+    SatisfactionScore INT NULL,
+    CONSTRAINT PK_SupportTickets PRIMARY KEY (TicketID),
+    CONSTRAINT FK_SupportTickets_CustomerID FOREIGN KEY (CustomerID) REFERENCES Customers(CustomerID),
+    CONSTRAINT FK_SupportTickets_EmployeeID FOREIGN KEY (EmployeeID) REFERENCES Employees(EmployeeID),
+    CONSTRAINT FK_SupportTickets_OrderID FOREIGN KEY (OrderID) REFERENCES Orders(OrderID)
+);
+
+CREATE TABLE CampaignResponses (
+    ResponseID INT NOT NULL,
+    CampaignID INT NOT NULL,
+    CustomerID INT NOT NULL,
+    ResponseDate DATE NULL,
+    ResponseType NVARCHAR(50) NULL,
+    ConvertedOrderID INT NULL,
+    CONSTRAINT PK_CampaignResponses PRIMARY KEY (ResponseID),
+    CONSTRAINT FK_CampaignResponses_CampaignID FOREIGN KEY (CampaignID) REFERENCES MarketingCampaigns(CampaignID),
+    CONSTRAINT FK_CampaignResponses_CustomerID FOREIGN KEY (CustomerID) REFERENCES Customers(CustomerID),
+    CONSTRAINT FK_CampaignResponses_ConvertedOrderID FOREIGN KEY (ConvertedOrderID) REFERENCES Orders(OrderID)
+);
+
+-- ============================================================================
+-- DATA
+-- ============================================================================
+
+-- Departments: 6 rows
+INSERT INTO Departments (DepartmentID, DepartmentName, Location) VALUES
+    (1, N'Sales', N'Lagos'),
+    (2, N'Marketing', N'Lagos'),
+    (3, N'Customer Support', N'Abuja'),
+    (4, N'Operations', N'Port Harcourt'),
+    (5, N'Finance', N'Lagos'),
+    (6, N'IT', N'Ibadan');
+
+-- Employees: 12 rows
+INSERT INTO Employees (EmployeeID, FirstName, LastName, DepartmentID, JobTitle, HireDate, MonthlySalary, ManagerID) VALUES
+    (101, N'Grace', N'Adeleke', 1, N'Sales Manager', '2020-03-12', 720000, NULL),
+    (102, N'Tunde', N'Balogun', 1, N'Sales Executive', '2021-07-05', 420000, 101),
+    (103, N'Mary', N'Okafor', 1, N'Sales Executive', '2022-01-18', 395000, 101),
+    (104, N'Ife', N'Johnson', 2, N'Marketing Lead', '2020-09-09', 650000, NULL),
+    (105, N'Samuel', N'Ojo', 2, N'Digital Marketer', '2023-02-11', 360000, 104),
+    (106, N'Amina', N'Yusuf', 3, N'Support Manager', '2019-11-21', 610000, NULL),
+    (107, N'Victor', N'Nwosu', 3, N'Support Agent', '2023-06-02', 310000, 106),
+    (108, N'Bola', N'Hassan', 3, N'Support Agent', '2022-08-27', 335000, 106),
+    (109, N'Chinedu', N'Eze', 4, N'Operations Officer', '2021-04-15', 450000, NULL),
+    (110, N'Kemi', N'Adeyemi', 5, N'Accountant', '2020-12-01', 500000, NULL),
+    (111, N'David', N'Ibrahim', 6, N'Data Analyst', '2022-10-03', 470000, NULL),
+    (112, N'Rita', N'George', 4, N'Logistics Coordinator', '2023-04-20', 340000, 109);
+
+-- Customers: 15 rows
+INSERT INTO Customers (CustomerID, FirstName, LastName, Email, City, State, Segment, SignupDate) VALUES
+    (1001, N'Ada', N'Obi', N'ada.obi@example.com', N'Lagos', N'Lagos', N'Retail', '2023-01-12'),
+    (1002, N'Kunle', N'Adebayo', N'kunle.adebayo@example.com', N'Ibadan', N'Oyo', N'Retail', '2023-02-04'),
+    (1003, N'Fatima', N'Bello', N'fatima.bello@example.com', N'Abuja', N'FCT', N'Corporate', '2022-11-19'),
+    (1004, N'Emeka', N'Okoro', N'emeka.okoro@example.com', N'Enugu', N'Enugu', N'Retail', '2023-05-28'),
+    (1005, N'Sarah', N'Musa', N'sarah.musa@example.com', N'Kaduna', N'Kaduna', N'SME', '2022-12-07'),
+    (1006, N'John', N'Etim', N'john.etim@example.com', N'Calabar', N'Cross River', N'Retail', '2024-01-15'),
+    (1007, N'Blessing', N'Uche', N'blessing.uche@example.com', N'Port Harcourt', N'Rivers', N'Corporate', '2023-08-09'),
+    (1008, N'Peter', N'James', N'peter.james@example.com', N'Lagos', N'Lagos', N'SME', '2024-02-21'),
+    (1009, N'Hauwa', N'Sani', N'hauwa.sani@example.com', N'Kano', N'Kano', N'Retail', '2022-09-30'),
+    (1010, N'Micheal', N'Dare', N'micheal.dare@example.com', N'Abeokuta', N'Ogun', N'Corporate', '2023-03-10'),
+    (1011, N'Nneka', N'Iro', N'nneka.iro@example.com', N'Owerri', N'Imo', N'SME', '2024-04-05'),
+    (1012, N'Segun', N'Soyoye', N'segun.soyoye@example.com', N'Lagos', N'Lagos', N'Retail', '2023-07-22'),
+    (1013, N'Yemi', N'Lawal', N'yemi.lawal@example.com', N'Ilorin', N'Kwara', N'SME', '2024-06-02'),
+    (1014, N'Linda', N'Okeke', N'linda.okeke@example.com', N'Asaba', N'Delta', N'Retail', '2024-07-13'),
+    (1015, N'Musa', N'Danladi', N'musa.danladi@example.com', N'Katsina', N'Katsina', N'Corporate', '2023-09-16');
+
+-- Products: 12 rows
+INSERT INTO Products (ProductID, ProductName, Category, UnitPrice, SupplierName, ReorderLevel) VALUES
+    (201, N'Laptop Stand', N'Accessories', 18500, N'TechSource Ltd', 20),
+    (202, N'Wireless Mouse', N'Accessories', 9500, N'TechSource Ltd', 30),
+    (203, N'Mechanical Keyboard', N'Accessories', 32000, N'Naija Gadgets', 15),
+    (204, N'27-inch Monitor', N'Electronics', 145000, N'VisionHub', 10),
+    (205, N'USB-C Hub', N'Accessories', 25000, N'Naija Gadgets', 25),
+    (206, N'Office Chair', N'Furniture', 85000, N'ComfortWorks', 8),
+    (207, N'Standing Desk', N'Furniture', 210000, N'ComfortWorks', 5),
+    (208, N'Noise Cancelling Headset', N'Electronics', 78000, N'SoundMax', 12),
+    (209, N'Webcam HD', N'Electronics', 42000, N'VisionHub', 18),
+    (210, N'Printer Toner', N'Office Supplies', 38000, N'PrintPlus', 20),
+    (211, N'A4 Paper Box', N'Office Supplies', 18000, N'PrintPlus', 40),
+    (212, N'Projector', N'Electronics', 260000, N'VisionHub', 4);
+
+-- MarketingCampaigns: 6 rows
+INSERT INTO MarketingCampaigns (CampaignID, CampaignName, Channel, StartDate, EndDate, Budget, TargetSegment) VALUES
+    (801, N'New Year Office Upgrade', N'Email', '2024-01-01', '2024-01-31', 350000, N'Corporate'),
+    (802, N'Back to Work Deals', N'Social Media', '2024-02-01', '2024-02-28', 280000, N'SME'),
+    (803, N'Student Tech Essentials', N'Search Ads', '2024-05-01', '2024-05-31', 220000, N'Retail'),
+    (804, N'Mid-Year Productivity Promo', N'Email', '2024-06-01', '2024-06-30', 300000, N'Corporate'),
+    (805, N'Black Friday Mega Sale', N'Social Media', '2024-11-01', '2024-11-30', 550000, N'Retail'),
+    (806, N'SME Digital Office Bundle', N'Sales Rep', '2025-01-05', '2025-02-05', 400000, N'SME');
+
+-- Orders: 55 rows
+INSERT INTO Orders (OrderID, CustomerID, EmployeeID, OrderDate, OrderStatus, SalesChannel, ShippingCity) VALUES
+    (3001, 1011, 103, '2024-05-09', N'Completed', N'Mobile App', N'Owerri'),
+    (3002, 1001, 102, '2024-05-03', N'Cancelled', N'Website', N'Lagos'),
+    (3003, 1010, 101, '2025-01-27', N'Completed', N'Marketplace', N'Abeokuta'),
+    (3004, 1013, 109, '2024-10-05', N'Completed', N'Marketplace', N'Ilorin'),
+    (3005, 1010, 101, '2024-01-28', N'Returned', N'Mobile App', N'Abeokuta'),
+    (3006, 1004, 101, '2024-11-11', N'Returned', N'Mobile App', N'Enugu'),
+    (3007, 1004, NULL, '2025-02-20', N'Completed', N'Marketplace', N'Enugu'),
+    (3008, 1004, 112, '2024-05-18', N'Returned', N'Marketplace', N'Enugu'),
+    (3009, 1007, 109, '2024-10-01', N'Completed', N'Website', N'Port Harcourt'),
+    (3010, 1005, 109, '2024-01-06', N'Returned', N'Sales Rep', N'Kaduna'),
+    (3011, 1006, NULL, '2024-10-07', N'Cancelled', N'Website', N'Calabar'),
+    (3012, 1002, 109, '2025-02-25', N'Completed', N'Mobile App', N'Ibadan'),
+    (3013, 1004, NULL, '2025-01-25', N'Returned', N'Mobile App', N'Enugu'),
+    (3014, 1001, 102, '2024-11-01', N'Completed', N'Website', N'Lagos'),
+    (3015, 1014, 112, '2024-05-05', N'Completed', N'Marketplace', N'Asaba'),
+    (3016, 1004, 109, '2024-07-04', N'Pending', N'Marketplace', N'Enugu'),
+    (3017, 1003, 102, '2024-02-12', N'Pending', N'Website', N'Abuja'),
+    (3018, 1007, 102, '2024-07-28', N'Completed', N'Mobile App', N'Port Harcourt'),
+    (3019, 1010, 101, '2025-01-21', N'Completed', N'Website', N'Abeokuta'),
+    (3020, 1001, NULL, '2024-02-15', N'Completed', N'Website', N'Lagos'),
+    (3021, 1010, 112, '2024-02-15', N'Pending', N'Sales Rep', N'Abeokuta'),
+    (3022, 1008, 112, '2024-02-25', N'Completed', N'Mobile App', N'Lagos'),
+    (3023, 1011, NULL, '2024-06-06', N'Returned', N'Website', N'Owerri'),
+    (3024, 1010, 103, '2024-04-18', N'Returned', N'Sales Rep', N'Abeokuta'),
+    (3025, 1009, 101, '2024-12-23', N'Completed', N'Website', N'Kano'),
+    (3026, 1011, 101, '2024-07-04', N'Cancelled', N'Marketplace', N'Owerri'),
+    (3027, 1012, NULL, '2025-02-08', N'Pending', N'Mobile App', N'Lagos'),
+    (3028, 1001, 109, '2024-06-21', N'Completed', N'Website', N'Lagos'),
+    (3029, 1010, NULL, '2024-05-19', N'Completed', N'Website', N'Abeokuta'),
+    (3030, 1006, 103, '2024-11-19', N'Completed', N'Website', N'Calabar'),
+    (3031, 1011, 102, '2024-11-15', N'Cancelled', N'Sales Rep', N'Owerri'),
+    (3032, 1011, 109, '2025-02-14', N'Returned', N'Mobile App', N'Owerri'),
+    (3033, 1002, NULL, '2025-01-23', N'Completed', N'Sales Rep', N'Ibadan'),
+    (3034, 1008, 112, '2024-04-13', N'Returned', N'Marketplace', N'Lagos'),
+    (3035, 1008, 109, '2024-12-11', N'Cancelled', N'Sales Rep', N'Lagos'),
+    (3036, 1008, 103, '2024-08-17', N'Completed', N'Sales Rep', N'Lagos'),
+    (3037, 1007, 102, '2024-02-06', N'Pending', N'Marketplace', N'Port Harcourt'),
+    (3038, 1008, 103, '2024-06-05', N'Pending', N'Marketplace', N'Lagos'),
+    (3039, 1012, 109, '2024-03-10', N'Cancelled', N'Website', N'Lagos'),
+    (3040, 1004, 103, '2025-01-28', N'Pending', N'Sales Rep', N'Enugu'),
+    (3041, 1010, 102, '2024-09-03', N'Returned', N'Website', N'Abeokuta'),
+    (3042, 1005, 101, '2024-06-12', N'Cancelled', N'Marketplace', N'Kaduna'),
+    (3043, 1006, 103, '2024-02-09', N'Cancelled', N'Sales Rep', N'Calabar'),
+    (3044, 1007, NULL, '2024-11-25', N'Pending', N'Mobile App', N'Port Harcourt'),
+    (3045, 1004, NULL, '2024-10-22', N'Cancelled', N'Marketplace', N'Enugu'),
+    (3046, 1005, NULL, '2024-12-29', N'Completed', N'Website', N'Kaduna'),
+    (3047, 1008, NULL, '2024-02-21', N'Completed', N'Mobile App', N'Lagos'),
+    (3048, 1005, 102, '2024-03-06', N'Returned', N'Mobile App', N'Kaduna'),
+    (3049, 1002, NULL, '2024-06-04', N'Completed', N'Sales Rep', N'Ibadan'),
+    (3050, 1012, NULL, '2024-11-26', N'Pending', N'Website', N'Lagos'),
+    (3051, 1003, NULL, '2024-05-13', N'Pending', N'Website', N'Abuja'),
+    (3052, 1013, 103, '2024-02-17', N'Completed', N'Website', N'Ilorin'),
+    (3053, 1010, NULL, '2024-02-24', N'Completed', N'Mobile App', N'Abeokuta'),
+    (3054, 1012, 103, '2024-01-21', N'Completed', N'Sales Rep', N'Lagos'),
+    (3055, 1011, 103, '2024-03-17', N'Completed', N'Website', N'Owerri');
+
+-- OrderItems: 143 rows
+INSERT INTO OrderItems (OrderItemID, OrderID, ProductID, Quantity, UnitPrice, DiscountPercent) VALUES
+    (1, 3001, 211, 5, 18000, 0),
+    (2, 3002, 212, 5, 260000, 5),
+    (3, 3002, 211, 2, 18000, 5),
+    (4, 3003, 205, 3, 25000, 0),
+    (5, 3003, 203, 1, 32000, 5),
+    (6, 3003, 204, 1, 145000, 0),
+    (7, 3004, 209, 3, 42000, 15),
+    (8, 3005, 202, 4, 9500, 0),
+    (9, 3005, 204, 4, 145000, 15),
+    (10, 3005, 212, 3, 260000, 0),
+    (11, 3006, 203, 4, 32000, 0),
+    (12, 3006, 208, 5, 78000, 0),
+    (13, 3007, 202, 3, 9500, 0),
+    (14, 3007, 204, 4, 145000, 5),
+    (15, 3007, 210, 4, 38000, 0),
+    (16, 3008, 206, 4, 85000, 0),
+    (17, 3008, 204, 1, 145000, 0),
+    (18, 3008, 203, 2, 32000, 15),
+    (19, 3008, 209, 2, 42000, 15),
+    (20, 3009, 211, 5, 18000, 0),
+    (21, 3010, 209, 3, 42000, 15),
+    (22, 3010, 202, 5, 9500, 10),
+    (23, 3011, 208, 3, 78000, 0),
+    (24, 3011, 201, 2, 18500, 0),
+    (25, 3011, 202, 2, 9500, 10),
+    (26, 3012, 211, 5, 18000, 0),
+    (27, 3012, 208, 3, 78000, 10),
+    (28, 3013, 207, 4, 210000, 10),
+    (29, 3013, 211, 4, 18000, 0),
+    (30, 3013, 206, 2, 85000, 0),
+    (31, 3014, 212, 1, 260000, 0),
+    (32, 3015, 209, 5, 42000, 10),
+    (33, 3015, 203, 4, 32000, 0),
+    (34, 3016, 212, 4, 260000, 15),
+    (35, 3016, 201, 3, 18500, 0),
+    (36, 3016, 202, 2, 9500, 0),
+    (37, 3016, 211, 2, 18000, 10),
+    (38, 3017, 211, 5, 18000, 0),
+    (39, 3018, 201, 3, 18500, 5),
+    (40, 3018, 207, 5, 210000, 15),
+    (41, 3018, 205, 4, 25000, 0),
+    (42, 3018, 208, 2, 78000, 0),
+    (43, 3019, 210, 4, 38000, 10),
+    (44, 3020, 211, 2, 18000, 5),
+    (45, 3021, 204, 2, 145000, 0),
+    (46, 3021, 211, 4, 18000, 0),
+    (47, 3021, 206, 3, 85000, 5),
+    (48, 3022, 203, 2, 32000, 0),
+    (49, 3022, 206, 3, 85000, 0),
+    (50, 3022, 202, 4, 9500, 10),
+    (51, 3023, 205, 1, 25000, 15),
+    (52, 3023, 202, 5, 9500, 0),
+    (53, 3024, 205, 3, 25000, 0),
+    (54, 3024, 201, 1, 18500, 0),
+    (55, 3024, 202, 2, 9500, 15),
+    (56, 3024, 207, 3, 210000, 0),
+    (57, 3025, 210, 4, 38000, 0),
+    (58, 3025, 209, 1, 42000, 0),
+    (59, 3025, 203, 3, 32000, 0),
+    (60, 3026, 204, 2, 145000, 5),
+    (61, 3026, 203, 1, 32000, 0),
+    (62, 3027, 203, 1, 32000, 5),
+    (63, 3027, 202, 2, 9500, 0),
+    (64, 3027, 207, 4, 210000, 0),
+    (65, 3028, 206, 4, 85000, 15),
+    (66, 3028, 211, 5, 18000, 0),
+    (67, 3028, 209, 1, 42000, 0),
+    (68, 3029, 206, 1, 85000, 5),
+    (69, 3029, 212, 5, 260000, 0),
+    (70, 3029, 207, 3, 210000, 0),
+    (71, 3029, 209, 4, 42000, 0),
+    (72, 3030, 209, 3, 42000, 5),
+    (73, 3030, 205, 3, 25000, 10),
+    (74, 3030, 207, 2, 210000, 0),
+    (75, 3031, 209, 2, 42000, 5),
+    (76, 3031, 201, 5, 18500, 10),
+    (77, 3031, 205, 3, 25000, 5),
+    (78, 3031, 210, 4, 38000, 5),
+    (79, 3032, 205, 5, 25000, 15),
+    (80, 3033, 204, 1, 145000, 0),
+    (81, 3033, 203, 2, 32000, 5),
+    (82, 3034, 207, 1, 210000, 5),
+    (83, 3034, 204, 2, 145000, 0),
+    (84, 3034, 203, 5, 32000, 5),
+    (85, 3034, 201, 1, 18500, 10),
+    (86, 3035, 210, 4, 38000, 0),
+    (87, 3035, 209, 4, 42000, 5),
+    (88, 3035, 207, 3, 210000, 0),
+    (89, 3035, 211, 3, 18000, 10),
+    (90, 3036, 205, 3, 25000, 10),
+    (91, 3036, 206, 1, 85000, 0),
+    (92, 3037, 209, 1, 42000, 0),
+    (93, 3037, 208, 4, 78000, 5),
+    (94, 3037, 207, 5, 210000, 15),
+    (95, 3038, 208, 3, 78000, 5),
+    (96, 3038, 204, 4, 145000, 0),
+    (97, 3039, 210, 4, 38000, 0),
+    (98, 3039, 212, 4, 260000, 0),
+    (99, 3039, 201, 1, 18500, 0),
+    (100, 3039, 202, 4, 9500, 0),
+    (101, 3040, 205, 5, 25000, 0),
+    (102, 3040, 202, 3, 9500, 0),
+    (103, 3040, 208, 1, 78000, 15),
+    (104, 3040, 201, 1, 18500, 0),
+    (105, 3041, 208, 3, 78000, 0),
+    (106, 3041, 205, 5, 25000, 10),
+    (107, 3042, 212, 1, 260000, 15),
+    (108, 3042, 204, 3, 145000, 15),
+    (109, 3042, 202, 5, 9500, 0),
+    (110, 3042, 211, 5, 18000, 0),
+    (111, 3043, 207, 4, 210000, 0),
+    (112, 3044, 203, 4, 32000, 5),
+    (113, 3044, 209, 4, 42000, 15),
+    (114, 3044, 205, 5, 25000, 0),
+    (115, 3044, 211, 3, 18000, 0),
+    (116, 3045, 201, 2, 18500, 5),
+    (117, 3045, 208, 2, 78000, 0),
+    (118, 3045, 206, 3, 85000, 0),
+    (119, 3046, 202, 4, 9500, 5),
+    (120, 3046, 204, 5, 145000, 0),
+    (121, 3047, 212, 4, 260000, 10),
+    (122, 3047, 204, 5, 145000, 0),
+    (123, 3047, 205, 4, 25000, 15),
+    (124, 3047, 206, 5, 85000, 0),
+    (125, 3048, 202, 2, 9500, 0),
+    (126, 3048, 209, 4, 42000, 0),
+    (127, 3048, 203, 5, 32000, 10),
+    (128, 3049, 205, 5, 25000, 0),
+    (129, 3049, 201, 3, 18500, 0),
+    (130, 3050, 210, 3, 38000, 5),
+    (131, 3051, 207, 4, 210000, 0),
+    (132, 3052, 210, 5, 38000, 5),
+    (133, 3052, 212, 4, 260000, 5),
+    (134, 3052, 211, 3, 18000, 10),
+    (135, 3052, 204, 4, 145000, 0),
+    (136, 3053, 211, 2, 18000, 0),
+    (137, 3053, 202, 5, 9500, 0),
+    (138, 3053, 203, 2, 32000, 0),
+    (139, 3054, 212, 2, 260000, 0),
+    (140, 3054, 208, 5, 78000, 15),
+    (141, 3054, 202, 2, 9500, 5),
+    (142, 3055, 205, 5, 25000, 0),
+    (143, 3055, 210, 4, 38000, 0);
+
+-- Payments: 46 rows
+INSERT INTO Payments (PaymentID, OrderID, PaymentDate, PaymentMethod, Amount, PaymentStatus) VALUES
+    (5001, 3001, '2024-05-13', N'USSD', 90000, N'Paid'),
+    (5002, 3003, '2025-01-29', N'Cash', 250400, N'Paid'),
+    (5003, 3004, '2024-10-09', N'Cash', 107100, N'Paid'),
+    (5004, 3005, '2024-01-30', N'Cash', 1311000, N'Paid'),
+    (5005, 3006, '2024-11-13', N'Card', 518000, N'Paid'),
+    (5006, 3007, '2025-02-22', N'Bank Transfer', 731500, N'Paid'),
+    (5007, 3008, '2024-05-21', N'Card', 610800, N'Paid'),
+    (5008, 3009, '2024-10-03', N'Card', 90000, N'Paid'),
+    (5009, 3010, '2024-01-07', N'Bank Transfer', 149850, N'Paid'),
+    (5010, 3012, '2025-03-01', N'USSD', 300600, N'Paid'),
+    (5011, 3013, '2025-01-25', N'Cash', 998000, N'Paid'),
+    (5012, 3014, '2024-11-01', N'Card', 260000, N'Paid'),
+    (5013, 3015, '2024-05-08', N'USSD', 317000, N'Paid'),
+    (5014, 3016, '2024-07-05', N'USSD', 0, N'Failed'),
+    (5015, 3017, '2024-02-13', N'Bank Transfer', 0, N'Pending'),
+    (5016, 3018, '2024-07-29', N'Card', 1201225, N'Paid'),
+    (5017, 3019, '2025-01-25', N'Bank Transfer', 136800, N'Paid'),
+    (5018, 3020, '2024-02-15', N'Bank Transfer', 34200, N'Paid'),
+    (5019, 3021, '2024-02-15', N'Card', 0, N'Failed'),
+    (5020, 3022, '2024-02-27', N'Card', 353200, N'Paid'),
+    (5021, 3023, '2024-06-08', N'Cash', 68750, N'Paid'),
+    (5022, 3024, '2024-04-21', N'USSD', 739650, N'Paid'),
+    (5023, 3025, '2024-12-25', N'Bank Transfer', 290000, N'Paid'),
+    (5024, 3027, '2025-02-09', N'Bank Transfer', 0, N'Failed'),
+    (5025, 3028, '2024-06-23', N'Bank Transfer', 421000, N'Paid'),
+    (5026, 3029, '2024-05-23', N'Bank Transfer', 2178750, N'Paid'),
+    (5027, 3030, '2024-11-22', N'USSD', 607200, N'Paid'),
+    (5028, 3032, '2025-02-18', N'Cash', 106250, N'Paid'),
+    (5029, 3033, '2025-01-27', N'Card', 205800, N'Paid'),
+    (5030, 3034, '2024-04-14', N'Card', 658150, N'Paid'),
+    (5031, 3036, '2024-08-18', N'Bank Transfer', 152500, N'Paid'),
+    (5032, 3037, '2024-02-10', N'USSD', 0, N'Pending'),
+    (5033, 3038, '2024-06-07', N'USSD', 0, N'Failed'),
+    (5034, 3040, '2025-01-29', N'Card', 0, N'Pending'),
+    (5035, 3041, '2024-09-03', N'Bank Transfer', 346500, N'Paid'),
+    (5036, 3044, '2024-11-27', N'USSD', 0, N'Pending'),
+    (5037, 3046, '2025-01-01', N'USSD', 761100, N'Paid'),
+    (5038, 3047, '2024-02-23', N'USSD', 2171000, N'Paid'),
+    (5039, 3048, '2024-03-10', N'Cash', 331000, N'Paid'),
+    (5040, 3049, '2024-06-04', N'Cash', 180500, N'Paid'),
+    (5041, 3050, '2024-11-29', N'Cash', 0, N'Failed'),
+    (5042, 3051, '2024-05-14', N'Bank Transfer', 0, N'Pending'),
+    (5043, 3052, '2024-02-21', N'Card', 1797100, N'Paid'),
+    (5044, 3053, '2024-02-27', N'USSD', 147500, N'Paid'),
+    (5045, 3054, '2024-01-21', N'Bank Transfer', 869550, N'Paid'),
+    (5046, 3055, '2024-03-20', N'Cash', 277000, N'Paid');
+
+-- SupportTickets: 35 rows
+INSERT INTO SupportTickets (TicketID, CustomerID, EmployeeID, OrderID, OpenedDate, ClosedDate, Priority, TicketStatus, IssueType, SatisfactionScore) VALUES
+    (7001, 1012, 106, 3050, '2024-09-17', '2024-09-25', N'Low', N'Resolved', N'Wrong Item', 5),
+    (7002, 1012, 106, 3050, '2024-01-18', NULL, N'Low', N'Open', N'Return Request', NULL),
+    (7003, 1014, 108, 3015, '2025-01-29', '2025-02-06', N'Urgent', N'Closed', N'Product Fault', NULL),
+    (7004, 1003, 107, NULL, '2024-08-15', '2024-08-17', N'Urgent', N'Resolved', N'Product Fault', 3),
+    (7005, 1006, 107, 3011, '2024-06-21', '2024-07-03', N'Urgent', N'Resolved', N'General Enquiry', 3),
+    (7006, 1001, 106, 3020, '2024-05-13', NULL, N'Urgent', N'Escalated', N'General Enquiry', NULL),
+    (7007, 1014, 106, NULL, '2024-12-06', '2024-12-13', N'High', N'Resolved', N'General Enquiry', 2),
+    (7008, 1013, 106, 3052, '2025-01-28', NULL, N'High', N'Open', N'General Enquiry', NULL),
+    (7009, 1003, 106, NULL, '2024-08-16', '2024-08-18', N'Medium', N'Resolved', N'Return Request', NULL),
+    (7010, 1003, 106, 3017, '2024-10-13', '2024-10-15', N'Urgent', N'Resolved', N'Delivery Delay', 1),
+    (7011, 1011, 108, NULL, '2024-09-16', NULL, N'High', N'Escalated', N'Wrong Item', NULL),
+    (7012, 1014, 106, 3015, '2024-05-08', '2024-05-17', N'Medium', N'Resolved', N'General Enquiry', 4),
+    (7013, 1009, 107, NULL, '2024-03-14', NULL, N'Urgent', N'Open', N'Product Fault', NULL),
+    (7014, 1015, 106, NULL, '2025-02-11', NULL, N'High', N'Escalated', N'Return Request', NULL),
+    (7015, 1005, 106, NULL, '2024-10-27', '2024-11-10', N'Urgent', N'Resolved', N'Product Fault', 4),
+    (7016, 1006, 106, 3043, '2024-07-16', '2024-07-22', N'Medium', N'Resolved', N'General Enquiry', NULL),
+    (7017, 1007, 108, 3044, '2024-01-27', NULL, N'Urgent', N'Escalated', N'Return Request', NULL),
+    (7018, 1015, 108, NULL, '2025-02-23', '2025-03-02', N'Medium', N'Resolved', N'Wrong Item', NULL),
+    (7019, 1001, 108, 3020, '2024-02-25', '2024-02-27', N'Low', N'Resolved', N'Return Request', 4),
+    (7020, 1003, 107, 3017, '2024-02-12', '2024-02-25', N'Urgent', N'Resolved', N'Return Request', 3),
+    (7021, 1002, 108, NULL, '2024-12-15', '2024-12-21', N'Urgent', N'Resolved', N'General Enquiry', NULL),
+    (7022, 1001, 106, 3014, '2024-11-23', NULL, N'Low', N'Escalated', N'Wrong Item', NULL),
+    (7023, 1002, 107, NULL, '2024-12-30', NULL, N'Medium', N'Open', N'Return Request', NULL),
+    (7024, 1005, 106, NULL, '2024-01-28', NULL, N'High', N'Escalated', N'Product Fault', NULL),
+    (7025, 1006, 108, 3011, '2024-10-02', '2024-10-12', N'Medium', N'Resolved', N'Payment Issue', 2),
+    (7026, 1002, 108, 3033, '2024-11-17', '2024-11-25', N'Medium', N'Closed', N'Wrong Item', 2),
+    (7027, 1011, 107, 3026, '2024-12-11', NULL, N'High', N'Open', N'Return Request', NULL),
+    (7028, 1009, 108, 3025, '2024-06-29', NULL, N'Urgent', N'Escalated', N'Return Request', NULL),
+    (7029, 1005, 107, 3046, '2024-04-15', '2024-04-29', N'Medium', N'Resolved', N'Wrong Item', 1),
+    (7030, 1010, 106, 3024, '2024-12-28', NULL, N'Urgent', N'Escalated', N'Product Fault', NULL),
+    (7031, 1001, 107, 3002, '2024-11-10', '2024-11-24', N'High', N'Resolved', N'Payment Issue', 2),
+    (7032, 1011, 106, 3026, '2024-12-17', '2024-12-28', N'Low', N'Closed', N'Product Fault', NULL),
+    (7033, 1013, 107, 3052, '2025-01-13', '2025-01-15', N'Urgent', N'Closed', N'Payment Issue', 3),
+    (7034, 1004, 106, 3016, '2024-07-10', NULL, N'High', N'Escalated', N'Wrong Item', NULL),
+    (7035, 1013, 107, 3052, '2025-02-19', NULL, N'Low', N'Open', N'Payment Issue', NULL);
+
+-- CampaignResponses: 65 rows
+INSERT INTO CampaignResponses (ResponseID, CampaignID, CustomerID, ResponseDate, ResponseType, ConvertedOrderID) VALUES
+    (9001, 802, 1013, '2024-02-28', N'Ignored', NULL),
+    (9002, 803, 1001, '2024-05-26', N'Purchased', 3014),
+    (9003, 804, 1010, '2024-06-22', N'Registered', NULL),
+    (9004, 805, 1006, '2024-11-27', N'Registered', NULL),
+    (9005, 801, 1007, '2024-01-16', N'Clicked', NULL),
+    (9006, 805, 1009, '2024-11-11', N'Ignored', NULL),
+    (9007, 802, 1005, '2024-02-21', N'Purchased', NULL),
+    (9008, 803, 1012, '2024-05-14', N'Clicked', NULL),
+    (9009, 802, 1005, '2024-02-02', N'Registered', NULL),
+    (9010, 804, 1003, '2024-06-04', N'Opened', NULL),
+    (9011, 805, 1002, '2024-11-13', N'Purchased', 3033),
+    (9012, 805, 1012, '2024-11-24', N'Opened', NULL),
+    (9013, 804, 1003, '2024-06-27', N'Purchased', NULL),
+    (9014, 803, 1001, '2024-05-23', N'Registered', NULL),
+    (9015, 802, 1013, '2024-02-15', N'Opened', NULL),
+    (9016, 803, 1001, '2024-05-22', N'Registered', NULL),
+    (9017, 805, 1012, '2024-11-12', N'Clicked', NULL),
+    (9018, 804, 1010, '2024-06-07', N'Clicked', NULL),
+    (9019, 804, 1003, '2024-06-22', N'Opened', NULL),
+    (9020, 806, 1005, '2025-01-08', N'Registered', NULL),
+    (9021, 802, 1008, '2024-02-26', N'Ignored', NULL),
+    (9022, 802, 1005, '2024-02-27', N'Ignored', NULL),
+    (9023, 802, 1008, '2024-02-27', N'Opened', NULL),
+    (9024, 803, 1014, '2024-05-05', N'Ignored', NULL),
+    (9025, 801, 1010, '2024-01-28', N'Opened', NULL),
+    (9026, 802, 1011, '2024-02-26', N'Opened', NULL),
+    (9027, 801, 1003, '2024-01-05', N'Clicked', NULL),
+    (9028, 803, 1014, '2024-05-26', N'Opened', NULL),
+    (9029, 805, 1004, '2024-11-01', N'Opened', NULL),
+    (9030, 803, 1001, '2024-05-05', N'Purchased', 3014),
+    (9031, 804, 1015, '2024-06-25', N'Registered', NULL),
+    (9032, 805, 1009, '2024-11-04', N'Purchased', 3025),
+    (9033, 806, 1011, '2025-02-03', N'Clicked', NULL),
+    (9034, 801, 1015, '2024-01-28', N'Purchased', NULL),
+    (9035, 801, 1015, '2024-01-23', N'Purchased', NULL),
+    (9036, 801, 1010, '2024-01-20', N'Opened', NULL),
+    (9037, 801, 1007, '2024-01-09', N'Ignored', NULL),
+    (9038, 806, 1011, '2025-01-29', N'Ignored', NULL),
+    (9039, 805, 1004, '2024-11-15', N'Ignored', NULL),
+    (9040, 805, 1006, '2024-11-04', N'Clicked', NULL),
+    (9041, 806, 1008, '2025-02-01', N'Purchased', NULL),
+    (9042, 804, 1010, '2024-06-27', N'Purchased', 3003),
+    (9043, 803, 1006, '2024-05-11', N'Registered', NULL),
+    (9044, 803, 1002, '2024-05-22', N'Purchased', 3012),
+    (9045, 801, 1015, '2024-01-04', N'Registered', NULL),
+    (9046, 802, 1005, '2024-02-19', N'Ignored', NULL),
+    (9047, 805, 1004, '2024-11-22', N'Clicked', NULL),
+    (9048, 804, 1010, '2024-06-28', N'Purchased', NULL),
+    (9049, 806, 1005, '2025-01-23', N'Ignored', NULL),
+    (9050, 803, 1004, '2024-05-04', N'Ignored', NULL),
+    (9051, 805, 1002, '2024-11-05', N'Purchased', 3012),
+    (9052, 803, 1014, '2024-05-18', N'Registered', NULL),
+    (9053, 801, 1010, '2024-01-19', N'Opened', NULL),
+    (9054, 804, 1003, '2024-06-20', N'Registered', NULL),
+    (9055, 801, 1007, '2024-01-09', N'Registered', NULL),
+    (9056, 803, 1004, '2024-05-01', N'Opened', NULL),
+    (9057, 802, 1013, '2024-02-03', N'Opened', NULL),
+    (9058, 806, 1005, '2025-01-10', N'Ignored', NULL),
+    (9059, 802, 1013, '2024-02-14', N'Purchased', 3052),
+    (9060, 803, 1012, '2024-05-11', N'Ignored', NULL),
+    (9061, 805, 1001, '2024-11-29', N'Clicked', NULL),
+    (9062, 802, 1008, '2024-02-25', N'Ignored', NULL),
+    (9063, 801, 1003, '2024-01-09', N'Purchased', NULL),
+    (9064, 804, 1015, '2024-06-14', N'Registered', NULL),
+    (9065, 802, 1005, '2024-02-12', N'Purchased', 3046);
